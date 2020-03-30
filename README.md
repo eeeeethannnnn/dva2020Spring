@@ -5,7 +5,7 @@ repo for dva 2020spring
 Preliminary requirement:
 pip install flask
 
-To run app, change directory to /dva2020SPring, type `python3 navigator.py` in cmd or terminal to see the app.
+To run app, change directory to /dva2020SPring, type `python3 navigator.py` in cmd or terminal and copy the http link in terminal to see the app.
 
 
 

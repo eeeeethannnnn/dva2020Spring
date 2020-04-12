@@ -46,6 +46,8 @@ def get_marta_rail_data():
 
 
 # example for uses
+
+
 cd = CrimeData('atlcrime.csv')
 cd.get_crime_data_json()
 cd.get_crime_data_for_dayofweek(0)

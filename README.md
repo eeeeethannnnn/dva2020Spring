@@ -7,6 +7,11 @@ pip install flask
 
 To run app, change directory to /dva2020SPring, type `python3 navigator.py` in cmd or terminal and copy the http link in terminal to see the app.
 
+# Crime data source:
+https://data.world/bryantahb/crime-in-atlanta-2009-2017
+
+# development Progress
+backend: finished data processing for crime data as json, finished data loading for Marta data as json
 
 
 

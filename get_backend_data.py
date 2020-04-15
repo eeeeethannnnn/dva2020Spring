@@ -21,6 +21,7 @@ class CrimeData():
         df['dayofweek']=df['date'].astype('datetime64[ns]').dt.dayofweek
         day_df = df[df['dayofweek']==day]
         json = day_df.to_json(f'crime_dayofweek={day}.json',orient='index')
+        day_df.to_csv(f'crime_dayofweek{day}.csv')
         return json
 
 

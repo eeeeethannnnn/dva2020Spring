@@ -13,6 +13,11 @@ https://data.world/bryantahb/crime-in-atlanta-2009-2017
 # development Progress
 backend: finished data processing for crime data as json, finished data loading for Marta data as json with get_backend_data.py
 
+Crime Map:
+1. Build a model of grids, calculate number of cases in each grid, divided by total number, and set crime index of cases with
+max cases as 100.
+2. Build a dayofweek bar to change data.
+
 
 
 Progress report: https://docs.google.com/document/d/1obAqcjNgBvAwu4Yw6JjfkXD2DGc4k00qVdh5PR8ouxw/edit#

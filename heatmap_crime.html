@@ -45,7 +45,12 @@
     <div id="floating-panel">
       <button onclick="toggleHeatmap()">Toggle Heatmap</button>
       <button onclick="changeRadius()">Change radius</button>
+      <div id='checkbox'>Select dayofweek: </div>
+
     </div>
+
+
+
     <div id="map"></div>
     <script  type="text/javascript" src="lib/d3/d3.min.js"></script>
     <script  type="text/javascript" src="lib/d3-dsv/d3-dsv.min.js"></script>
@@ -55,13 +60,6 @@
       // This example requires the Visualization library. Include the libraries=visualization
       // parameter when you first load the API. For example:
       // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=visualization">
-
-
-
-
-
-
-      // draw map
 
 
       var map, heatmap;
@@ -91,6 +89,8 @@
           'rgba(191, 0, 31, 1)',
           'rgba(255, 0, 0, 1)'
         ]
+
+        //var gradient = ['transparent','teal','blue','red']
         //heatmap.set('gradient', heatmap.get('gradient') ? null : gradient);
         return gradient;
       }
@@ -100,8 +100,39 @@
       }
 
 
-      // Heatmap data: 500 Points
       function getPoints() {
+
+        ///dropdown
+          var dropdown = d3.select("#checkbox")
+                        .insert("select", "svg")
+                        .on('change', onchange);
+
+
+
+          dropdown.selectAll("option")
+                          .data(['Mon','Tue','Wed','Thur','Fri','Sat','Sun'])
+                          .enter().append("option")
+                          .attr("value", function (d) {
+                            if(d==='Mon') {return 0;}
+                            else if (d==='Tue') { return 1;}
+                            else if (d==='Wed') { return 2;}
+                            else if (d==='Thur') { return 3;}
+                            else if (d==='Fri') { return 4;}
+                            else if (d==='Sat') { return 5;}
+                            else if (d==='Sun') { return 6;}
+                            return d;
+                          })
+                          .text(function (d) {
+                              return d;
+                          });
+
+           function onchange(){
+
+            var currentSelection = d3.select(this).property('value');
+             console.log(currentSelection);
+            // console.log("things changed in dropdown");
+            //drawBarCharts(currentSelection);
+          }
 
         datalist = d3.csv("crime_dayofweek0.csv").then(function(dataset) {
             // the rest of my d3 graph code he
@@ -116,15 +147,17 @@
           }).then(function(dataset){
             //
 
-            console.log(dataset);
+            //console.log(dataset);
             // // console.log("gg")
             // return ;
 
             mycenter = {lat: 33.7490, lng: -84.3880}
             map = new google.maps.Map(document.getElementById('map'), {
-              zoom: 13,
+              zoom: 12,
               center: mycenter,
-              mapTypeId: 'roadmap'
+              mapTypeId: 'roadmap',
+              streetViewControl: false,
+              mapTypeControl: false
             });
 
             heatmap = new google.maps.visualization.HeatmapLayer({
@@ -148,14 +181,15 @@
       function placeMarkerAndPanTo(latLng, map) {
         var marker = new google.maps.Marker({
           position: latLng,
-          map: map
+          map: map,
+
         });
         map.panTo(latLng);
       }
 
     </script>
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=KEY&libraries=visualization&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB8ofvqfizzg62flqjKWzmoWZCW9wkOcHE&libraries=visualization&callback=initMap">
     </script>
   </body>
 </html>

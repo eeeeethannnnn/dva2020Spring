@@ -107,6 +107,11 @@
       var map, heatmap;
       var val;
       var crimes,max_crime_count=0;
+      var max_region_cases = 0;
+
+      var W = -84.552449, E = -84.290496, N= 33.891756, S = 33.646680;
+      var split_num = 15;
+      var ns_itv,ew_itv;
       var count = 0;
       var max_pos = [33.75333,-84.39186];
       var instruction='Enter your special instruction';
@@ -214,6 +219,7 @@
 
 
 
+
       }// end of getPoints
 
 
@@ -233,23 +239,56 @@
 
       }
 
-      function drawCrimeMap(value){
+      async function drawCrimeMap(value){
         datalist = d3.csv(`processed_data/crime_dayofweek${value}.csv`).then(function(dataset) {
             // the rest of my d3 graph code he
             //console.log(dataset);
             val = value;
             outlist= [];
             max_crime_count = 0;
-            dataset.forEach(function(d){
 
-              if(distance(max_pos,[d.lat,d.long])<1){max_crime_count += 1};
+             region_matrix =  regions(split_num); // record region data -->
+            //region_matrix[]
+            console.log(region_matrix)
+             dataset.forEach(function(d){
+
+              var lat_num = Math.floor((d.lat-S)/ew_itv);
+              var lng_num = Math.floor((d.long-W)/ns_itv);
+
+              if(lng_num<0) {lng_num=0;}
+              else if(lng_num>split_num-1) {lng_num=split_num-1;}
+              if(lat_num<0) {lat_num=0;}
+              else if(lat_num>split_num-1) {lat_num=split_num-1;}
+              //console.log((d.lat-S)+","+ew_itv)
+              //console.log(lat_num+" "+lng_num)
+              //console.log(region_matrix[0][14]);
+              // if(lat_num<0) {
+              //   console.log(1)
+              //   region_matrix[lat_num+1][lng_num] += 1;}
+              // else if(lng_num<0){
+              //   console.log(2)
+              //   region_matrix[lat_num+1][lng_num+1] += 1;}
+              // else {
+              //   console.log(3)
+              //   region_matrix[lat_num][lng_num] += 1;}
+              region_matrix[lat_num][lng_num] += 1;
+
+              if(distance(max_pos,[d.lat,d.long])<1){max_crime_count += 1}; // calculate crime index based on singel points
+
+
 
               outlist.push({location:new google.maps.LatLng(d.lat, d.long), weight:crime_weight(d.crime)});
             });
             console.log(max_crime_count);
+
+            max_region_cases = get_max_region_cases(region_matrix);
+            console.log(max_region_cases);
+            console.log(region_matrix+"after");
+
             crimes = outlist;
             //console.log(outlist);
             return outlist;
+
 
 
           }).then(function(dataset){
@@ -276,10 +315,11 @@
 
         var crimes_cases = await crimes_marker([latLng.lat(),latLng.lng()],crimes);
         console.log("crimes cases:"+ crimes_cases);
-        console.log("count"+count);
+        //console.log("count"+count);
 
         var infowindow = await new google.maps.InfoWindow({
-          content:latLng.lat()+","+latLng.lng() +"<br>"+instruction + "</br><br> crime index:"+parseInt((count/max_crime_count)*100) +"</br>"
+          content:latLng.lat()+","+latLng.lng() +"<br>"+instruction + "</br><br> crime index:"+parseInt((crimes_cases/max_crime_count)*100) +"</br>"
+          //content:latLng.lat()+","+latLng.lng() +"<br>"+instruction + "</br><br> crime index:"+parseInt((crimes_cases/max_region_cases)*100) +"</br>"
         });
 
         var marker =await new google.maps.Marker({
@@ -313,6 +353,20 @@
         async function crimes_marker(mk,crimes){
           count = 0;
 
+          var lat_num = Math.floor((mk[0]-S)/ew_itv);
+          var lng_num = Math.floor((mk[1]-W)/ns_itv);
+
+          if(lng_num<0) {lng_num=0;}
+          else if(lng_num>split_num-1) {lng_num=split_num-1;}
+          if(lat_num<0) {lat_num=0;}
+          else if(lat_num>split_num-1) {lat_num=split_num-1;}
+
+          var cur_cases = region_matrix[lat_num][lng_num]
+          console.log("cur region cases:"+cur_cases)
+          console.log("max_region cases:"+max_region_cases)
+          console.log("ratio="+ cur_cases/max_region_cases)
+          //return cur_cases;
+
           await d3.csv(`processed_data/crime_dayofweek${val}.csv`).then(function(dataset) {
             //console.log(dataset);
             dataset.forEach(function(d){
@@ -324,8 +378,39 @@
           return count;
         }
 
+        function regions(split_num){
+           ns_itv = (N-S)/split_num;
+           ew_itv = (E-W)/split_num;
+           //console.log(ns_itv);
+           //console.log(ew_itv);
 
-        
+           regions_matrix = []
+
+           for (let i = 0; i < split_num; i++) {
+              temp = [];
+              for (let j = 0; j < split_num; j++) {
+                  temp.push(0);
+              }
+              regions_matrix.push(temp);
+            }
+
+            return regions_matrix;
+
+        }
+
+        function get_max_region_cases(matrix){
+          var max = 0 ;
+          matrix.forEach(function(r){
+            r.forEach(function(d){
+              if(d>max) max = d;
+            })
+          })
+          return max;
+        }
+
+
+
+
 
     </script>
     <script async defer

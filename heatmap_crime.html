@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Heatmaps</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #floating-panel2 {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+        text-align: center;
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+      #floating-panel {
+        background-color:  #ffffff;
+        border: 1px solid #999;
+        left: 25%;
+        padding: 5px;
+        position: absolute;
+        top: 10px;
+        z-index: 5;
+      }
+      #legend-panel {
+        background-color:  'rgba(0, 255, 255, 0)';
+        left: 50px;
+        padding: 5px;
+        position: absolute;
+        bottom: 20px;
+        z-index: 5;
+        opacity: 1;
+      }
+
+      .axis path,
+	  	.axis tick,
+	    .axis line {
+	  		fill: none;
+	  		stroke: none;
+	  	}
+    </style>
+
+  </head>
+
+  <body>
+
+    <div id="floating-panel">
+      <button onclick="toggleHeatmap()">Toggle Heatmap</button>
+      <button onclick="changeRadius()">Change radius</button>
+      <div id='checkbox'>Select dayofweek: </div>
+
+
+
+
+    </div>
+
+    <div id="floating-panel2">
+      <b>Add Special Instructions</b>
+      <form name="myform" onSubmit="return handleSubmit()">
+        <input type="text" id="myVal" placeholder="Add some special instructions here&hellip;">
+            <input name="Submit"  type="submit" value="Submit" >
+        </form>
+
+    </div>
+
+
+
+    <div id="legend-panel">
+      <div id="chart"></div>
+    </div>
+
+
+
+
+
+
+
+
+    <script  type="text/javascript" src="lib/d3/d3.min.js"></script>
+    <script  type="text/javascript" src="lib/d3-dsv/d3-dsv.min.js"></script>
+    <script  type="text/javascript" src="lib/d3-fetch/d3-fetch.min.js"></script>
+    <script src="gradient.js"></script>
+
+    <div id="map"></div>
+    <script>
+
+      // This example requires the Visualization library. Include the libraries=visualization
+      // parameter when you first load the API. For example:
+      // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=visualization">
+
+
+      var map, heatmap;
+      var val;
+      var crimes,max_crime_count=0;
+      var max_region_cases = 0;
+
+      var W = -84.552449, E = -84.290496, N= 33.891756, S = 33.646680;
+      var split_num = 15;
+      var ns_itv,ew_itv;
+      var count = 0;
+      var max_pos = [33.75333,-84.39186];
+      var instruction='Enter your special instruction';
+      function initMap() {
+        mycenter = {lat: 33.7490, lng: -84.3880}
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 12,
+          center: mycenter,
+          mapTypeId: 'roadmap',
+          streetViewControl: false,
+          mapTypeControl: false
+        });
+        map.addListener('click', function(e) {
+            placeMarkerAndPanTo(e.latLng, map);
+        });
+
+        getPoints();
+
+
+
+      }
+
+
+
+      function handleSubmit(event){
+                instruction = document.getElementById("myVal").value
+                return false;
+            }
+
+
+      function toggleHeatmap() {
+        heatmap.setMap(heatmap.getMap() ? null : map);
+      }
+
+      function changeGradient() {
+        var gradient = [
+          'rgba(0, 255, 255, 0)',
+          'rgba(0, 255, 255, 1)',
+          'rgba(0, 191, 255, 1)',
+          'rgba(0, 127, 255, 1)',
+          'rgba(0, 63, 255, 1)',
+          'rgba(0, 0, 255, 1)',
+          'rgba(0, 0, 223, 1)',
+          'rgba(0, 0, 191, 1)',
+          'rgba(0, 0, 159, 1)',
+          'rgba(0, 0, 127, 1)',
+          'rgba(63, 0, 91, 1)',
+          'rgba(127, 0, 63, 1)',
+          'rgba(191, 0, 31, 1)',
+          'rgba(255, 0, 0, 1)'
+
+        ]
+
+        //var gradient = [ 'rgba(0, 255, 255, 0)',"#2c7bb6", "#00a6ca","#00ccbc","#90eb9d","#ffff8c",
+        //   "#f9d057","#f29e2e","#e76818","#d7191c"]
+
+        //heatmap.set('gradient', heatmap.get('gradient') ? null : gradient);
+        return gradient;
+      }
+
+      function changeRadius() {
+        if(heatmap.get('radius') == null){ heatmap.set('radius', 30); }
+        else if(heatmap.get('radius')==30){ heatmap.set('radius',5);  }
+        else if(heatmap.get('radius')===5){ heatmap.set('radius', 30); }
+      }
+
+
+      function getPoints() {
+
+        ///dropdown
+          var dropdown = d3.select("#checkbox")
+                        .insert("select", "svg")
+                        .on('change', onchange);
+
+
+
+          dropdown.selectAll("option")
+                          .data(['Mon','Tue','Wed','Thur','Fri','Sat','Sun'])
+                          .enter().append("option")
+                          .attr("value", function (d) {
+                            if(d==='Mon') {return 0;}
+                            else if (d==='Tue') { return 1;}
+                            else if (d==='Wed') { return 2;}
+                            else if (d==='Thur') { return 3;}
+                            else if (d==='Fri') { return 4;}
+                            else if (d==='Sat') { return 5;}
+                            else if (d==='Sun') { return 6;}
+                            return d;
+                          })
+                          .text(function (d) {
+                              return d;
+                          });
+
+           function onchange(){
+
+            var currentSelection = d3.select(this).property('value');
+             //console.log(currentSelection);
+            // console.log("things changed in dropdown");
+            //drawBarCharts(currentSelection);
+            drawCrimeMap(currentSelection);
+          }
+
+          drawCrimeMap(0);
+
+
+
+
+
+      }// end of getPoints
+
+
+      function crime_weight(d){
+          if(d==='LARCENY-NON VEHICLE') {return 1;}
+          else if(d==='AUTO THEFT') {return 1;}
+          else if(d==='LARCENY-FROM VEHICLE') {return 1;}
+          else if(d==='BURGLARY-RESIDENCE') {return 1;}
+          else if(d==='ROBBERY-PEDESTRIAN') {return 4;}
+          else if(d==='AGG ASSAULT') {return 4;}
+          else if(d==='RAPE') {return 3;}
+          else if(d==='BURGLARY-NONRES') {return 1;}
+          else if(d==='HOMICIDE') {return 5;}
+          else if(d==='ROBBERY-RESIDENCE') {return 3;}
+          else if(d==='ROBBERY-COMMERCIAL') {return 3;}
+          else return 0;
+
+      }
+
+      async function drawCrimeMap(value){
+        datalist = d3.csv(`processed_data/crime_dayofweek${value}.csv`).then(function(dataset) {
+            // the rest of my d3 graph code he
+            //console.log(dataset);
+            val = value;
+            outlist= [];
+            max_crime_count = 0;
+
+             region_matrix =  regions(split_num); // record region data -->
+            //region_matrix[]
+            console.log(region_matrix)
+             dataset.forEach(function(d){
+
+              var lat_num = Math.floor((d.lat-S)/ew_itv);
+              var lng_num = Math.floor((d.long-W)/ns_itv);
+
+              if(lng_num<0) {lng_num=0;}
+              else if(lng_num>split_num-1) {lng_num=split_num-1;}
+              if(lat_num<0) {lat_num=0;}
+              else if(lat_num>split_num-1) {lat_num=split_num-1;}
+              //console.log((d.lat-S)+","+ew_itv)
+              //console.log(lat_num+" "+lng_num)
+              //console.log(region_matrix[0][14]);
+              // if(lat_num<0) {
+              //   console.log(1)
+              //   region_matrix[lat_num+1][lng_num] += 1;}
+              // else if(lng_num<0){
+              //   console.log(2)
+              //   region_matrix[lat_num+1][lng_num+1] += 1;}
+              // else {
+              //   console.log(3)
+              //   region_matrix[lat_num][lng_num] += 1;}
+              region_matrix[lat_num][lng_num] += 1;
+
+              if(distance(max_pos,[d.lat,d.long])<1){max_crime_count += 1}; // calculate crime index based on singel points
+
+
+
+              outlist.push({location:new google.maps.LatLng(d.lat, d.long), weight:crime_weight(d.crime)});
+            });
+            console.log(max_crime_count);
+
+            max_region_cases = get_max_region_cases(region_matrix);
+            console.log(max_region_cases);
+            console.log(region_matrix+"after");
+
+            crimes = outlist;
+            //console.log(outlist);
+            return outlist;
+
+
+
+          }).then(function(dataset){
+
+
+
+            if(heatmap!=null) heatmap.setMap(null);
+
+            heatmap = new google.maps.visualization.HeatmapLayer({
+              data: dataset,
+              map: map,
+              radius: 30,
+              gradient: changeGradient()
+            });
+
+
+
+
+
+          });
+      }
+
+      async function placeMarkerAndPanTo(latLng, map) {
+
+        var crimes_cases = await crimes_marker([latLng.lat(),latLng.lng()],crimes);
+        console.log("crimes cases:"+ crimes_cases);
+        //console.log("count"+count);
+
+        var infowindow = await new google.maps.InfoWindow({
+          content:latLng.lat()+","+latLng.lng() +"<br>"+instruction + "</br><br> crime index:"+parseInt((crimes_cases/max_crime_count)*100) +"</br>"
+          //content:latLng.lat()+","+latLng.lng() +"<br>"+instruction + "</br><br> crime index:"+parseInt((crimes_cases/max_region_cases)*100) +"</br>"
+        });
+
+        var marker =await new google.maps.Marker({
+          position: latLng,
+          map: map,
+          draggable:true,
+
+
+        });
+        await map.panTo(latLng);
+
+
+
+        await marker.addListener('click', function() {
+          infowindow.open(map, marker);
+        });
+
+      }
+        // calculate distance between two points
+        function distance(mk1, mk2) {
+            var R = 3958.8; // Radius of the Earth in miles
+            var rlat1 = mk1[0] * (Math.PI/180); // Convert degrees to radians
+            var rlat2 = mk2[0] * (Math.PI/180); // Convert degrees to radians
+            var difflat = rlat2-rlat1; // Radian difference (latitudes)
+            var difflon = (mk2[1]-mk1[1]) * (Math.PI/180); // Radian difference (longitudes)
+
+            var d = 2 * R * Math.asin(Math.sqrt(Math.sin(difflat/2)*Math.sin(difflat/2)+Math.cos(rlat1)*Math.cos(rlat2)*Math.sin(difflon/2)*Math.sin(difflon/2)));
+            return d;
+          }
+
+        async function crimes_marker(mk,crimes){
+          count = 0;
+
+          var lat_num = Math.floor((mk[0]-S)/ew_itv);
+          var lng_num = Math.floor((mk[1]-W)/ns_itv);
+
+          if(lng_num<0) {lng_num=0;}
+          else if(lng_num>split_num-1) {lng_num=split_num-1;}
+          if(lat_num<0) {lat_num=0;}
+          else if(lat_num>split_num-1) {lat_num=split_num-1;}
+
+          var cur_cases = region_matrix[lat_num][lng_num]
+          console.log("cur region cases:"+cur_cases)
+          console.log("max_region cases:"+max_region_cases)
+          console.log("ratio="+ cur_cases/max_region_cases)
+          //return cur_cases;
+
+          await d3.csv(`processed_data/crime_dayofweek${val}.csv`).then(function(dataset) {
+            //console.log(dataset);
+            dataset.forEach(function(d){
+                if(distance(mk,[d.lat,d.long])<1.0) {count += 1};
+            })
+            //console.log(count);
+          }).then(function(a){return count});
+
+          return count;
+        }
+
+        function regions(split_num){
+           ns_itv = (N-S)/split_num;
+           ew_itv = (E-W)/split_num;
+           //console.log(ns_itv);
+           //console.log(ew_itv);
+
+           regions_matrix = []
+
+           for (let i = 0; i < split_num; i++) {
+              temp = [];
+              for (let j = 0; j < split_num; j++) {
+                  temp.push(0);
+              }
+              regions_matrix.push(temp);
+            }
+
+            return regions_matrix;
+
+        }
+
+        function get_max_region_cases(matrix){
+          var max = 0 ;
+          matrix.forEach(function(r){
+            r.forEach(function(d){
+              if(d>max) max = d;
+            })
+          })
+          return max;
+        }
+
+
+
+
+
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD0KnAEEpPVCyMX5swoZ_g42Sp_UGgw-OQ&libraries=visualization&callback=initMap">
+    </script>
+  </body>
+</html>

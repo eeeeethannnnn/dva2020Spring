@@ -20,3 +20,11 @@ Progress report: https://docs.google.com/document/d/1obAqcjNgBvAwu4Yw6JjfkXD2DGc
 Proposal final version: https://docs.google.com/document/d/1k3DO6w0mCKB6WbNiO9V56wjT1AQXCydWLjSJJyBqI10/edit
 
 Proposal discussion: https://docs.google.com/document/d/1k-9Isi-dyjtrnoLBnD3rLMsvTG4m8MDrT2V3ZnC_pAM/edit
+
+
+For direction setup:
+
+Run:
+python cors_server.py
+
+Open: direction.html

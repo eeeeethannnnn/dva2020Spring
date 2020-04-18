@@ -3,4 +3,3 @@ __pycache__/
 .idea/
 *.ipynb
 .ipynb_checkpoints/
-processed_data/

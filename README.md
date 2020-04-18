@@ -10,21 +10,15 @@ To run app, change directory to /dva2020SPring,
 
 2. For direction setup:
 
-Run:
-python cors_server.py
+  Run:
+  python cors_server.py
 
-Open: direction.html
+  Open: direction.html
 
 # Crime data source:
 https://data.world/bryantahb/crime-in-atlanta-2009-2017
 
 # development Progress
-
-Crime Map:
-1. Build a model of grids, calculate number of cases in each grid, divided by total number, and set crime index of cases with
-max cases as 100.
-2. Build a dayofweek bar to change data.
-
 
 
 Progress report:  https://docs.google.com/document/d/14zlKJDJ-P-m9XlJSsZxpegkVBsxR0UmXlAieJRGKgJ8/edit

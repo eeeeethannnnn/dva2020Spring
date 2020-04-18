@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Place Autocomplete and Directions</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+        position: relative;
+      }
+
+      .show
+        {
+        text-align:center;
+        background:white;
+        position: relative;
+        height: 50%;
+        width: 28%;
+        display:block;
+        margin-left: 65%;
+        border: 2px solid transparent;
+        border-radius: 10px 10px 10px 10px;
+        }
+
+        #flip 
+        {
+        background-color: #4d90fe;
+        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+        position: relative;
+        height: 30px;
+        width: 100%;
+        margin-top: 0;
+        border: 1px solid transparent;
+        border-radius: 10px 10px 10px 10px;
+        font-family: Roboto;
+        font-size: 10px;
+        font-weight: 300;
+        text-overflow: ellipsis;
+        }
+    
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .controls {
+        margin-top: 10px;
+        border: 1px solid transparent;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        height: 32px;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      #origin-input,
+      #destination-input {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 200px;
+      }
+
+      #origin-input:focus,
+      #destination-input:focus {
+        border-color: #4d90fe;
+      }
+
+      #mode-selector {
+        color: #fff;
+        background-color: #4d90fe;
+        margin-left: 12px;
+        padding: 5px 11px 0px 11px;
+      }
+
+      #mode-selector label {
+        font-family: Roboto;
+        font-size: 13px;
+        font-weight: 300;
+      }
+
+      #direction-panel {
+        font-family: 'Roboto','sans-serif';
+      }
+
+      #direction-panel select {
+        width: 100%;
+        height: 200px;
+      }
+
+      #direction-panel i {
+        font-size: 12px;
+      }
+      #direction-panel {
+        float: right;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map" class="big"></div>
+    <input id="origin-input" class="controls" type="text"
+        placeholder="Enter an origin location">
+
+    <input id="destination-input" class="controls" type="text"
+        placeholder="Enter a destination location">
+
+    <div id="mode-selector" class="controls">
+        <input type="radio" name="type" id="changemode-walking" checked="checked">
+        <label for="changemode-walking">Walking</label>
+
+        <input type="radio" name="type" id="changemode-transit">
+        <label for="changemode-transit">Transit</label>
+
+        <input type="radio" name="type" id="changemode-driving">
+        <label for="changemode-driving">Driving</label>
+    </div>
+    <div id="direction-panel" class="show">
+        <p classs="flip" id="flip">Direction</p>
+    </div>
+    <script type="text/javascript" src="jquery-3.5.0.js"></script>
+    <script type="text/javascript" src="worker.js"></script>
+    <script>
+
+var map;
+var markers = [];
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    mapTypeControl: false,
+    center: {lat: 33.7756, lng: -84.3963},
+    zoom: 13
+  });
+
+  new AutocompleteDirectionsHandler(map);
+}
+
+/**
+ * @constructor
+ */
+$(function () {
+    $(".big").hover(function () {
+            $(".show").stop(true,true).animate({ height:"300px"});
+        }, function () {
+            $(".show").stop(true,true).animate({height:"30px"});
+        });
+})
+
+function AutocompleteDirectionsHandler(map) {
+  this.map = map;
+  this.originPlaceId = null;
+  this.destinationPlaceId = null;
+  this.travelMode = 'TRANSIT';
+  this.directionsService = new google.maps.DirectionsService;
+  this.directionsRenderer = new google.maps.DirectionsRenderer;
+  this.directionsRenderer.setMap(map);
+  this.directionsRenderer.setPanel(document.getElementById('direction-panel'));
+
+  var originInput = document.getElementById('origin-input');
+  var destinationInput = document.getElementById('destination-input');
+  var modeSelector = document.getElementById('mode-selector');
+  var panel = document.getElementById('direction-panel');
+
+  var originAutocomplete = new google.maps.places.Autocomplete(originInput);
+  // Specify just the place data fields that you need.
+  originAutocomplete.setFields(['place_id']);
+
+  var destinationAutocomplete =
+      new google.maps.places.Autocomplete(destinationInput);
+  // Specify just the place data fields that you need.
+  destinationAutocomplete.setFields(['place_id']);
+
+  this.setupClickListener('changemode-walking', 'WALKING');
+  this.setupClickListener('changemode-transit', 'TRANSIT');
+  this.setupClickListener('changemode-driving', 'DRIVING');
+
+  this.setupPlaceChangedListener(originAutocomplete, 'ORIG');
+  this.setupPlaceChangedListener(destinationAutocomplete, 'DEST');
+
+  this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(originInput);
+  this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(
+      destinationInput);
+  this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(modeSelector);
+  this.map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(panel)
+}
+
+// Sets a listener on a radio button to change the filter type on Places
+// Autocomplete.
+AutocompleteDirectionsHandler.prototype.setupClickListener = function(
+    id, mode) {
+  var radioButton = document.getElementById(id);
+  var me = this;
+
+  radioButton.addEventListener('click', function() {
+    me.stopWorker();
+    me.travelMode = mode;
+    me.route();
+  });
+};
+AutocompleteDirectionsHandler.prototype.setupPlaceChangedListener = function(
+    autocomplete, mode) {
+  var me = this;
+  autocomplete.bindTo('bounds', this.map);
+  
+  autocomplete.addListener('place_changed', function() {
+    me.stopWorker();
+    var place = autocomplete.getPlace();
+
+    if (!place.place_id) {
+      window.alert('Please select an option from the dropdown list.');
+      return;
+    }
+    if (mode === 'ORIG') {
+      me.originPlaceId = place.place_id;
+    } else {
+      me.destinationPlaceId = place.place_id;
+    }
+    me.route();
+  });
+};
+
+var w;
+function onmessage(oEvent) {
+    var startTime = new Date().getTime();
+    var endTime = new Date().getTime();
+    console.log("I'm here");
+    while(endTime - startTime < oEvent.delay) {
+        endTime = new Date().getTime();
+    }
+    postMessage({
+            time: endTime,
+            msg:"startTime:" + startTime,
+    });
+}
+var b = false;
+var response = 'onmessage = function (oEvent) {var startTime = new Date().getTime();var endTime = new Date().getTime(); while(endTime - startTime < oEvent.delay) {endTime = new Date().getTime();console.log(endTime);}postMessage({      time: endTime,    msg:"startTime:" + startTime,});}'
+AutocompleteDirectionsHandler.prototype.startWorker = function(route_nums, lines) {
+  var me = this;
+  markers = [];
+  if(typeof(Worker) !== "undefined") {
+    if(typeof(w) === "undefined") {
+    //   w = new Worker(URL.createObjectURL(new Blob([response], {type: 'text/javascript'})));
+        w = new Worker(window.URL.createObjectURL(new Blob([document.getElementById("worker").textContent]), {type: 'text/javascript'}));
+    }
+    for (var i = 0; i < 10; i++) {
+        console.log("I'm here");
+        var startTime = new Date();
+        w.postMessage({"startTime":startTime,"delay":60000});
+        w.onmessage = function(event) {
+            console.log(event.data)
+            for (x in markers) {
+                markers[x].setMap(null);
+            }
+            markers = [];
+            console.log("update markers");
+            console.log(route_nums);
+            console.log(lines);
+            me.updateBusMaker(me.map, route_nums);
+            me.updateRailMaker(me.map, lines);
+
+        };
+    }
+  } else {
+    alert("Sorry, your browser does not support Web Workers...");
+  }
+}
+
+AutocompleteDirectionsHandler.prototype.stopWorker = function() { 
+  if (typeof(w) !== "undefined") {
+    b = true;
+    markers = [];
+    w.terminate();
+    w = undefined;
+    b = false;
+  }
+}
+
+AutocompleteDirectionsHandler.prototype.updateBusMaker = function(map, route_nums) {
+    if (route_nums.length === 0) {
+        console.log('Bus is not available for current direction');
+        return;
+    }
+    $.ajax({
+        type: "GET",
+        dataType: "json",
+        url: "http://127.0.0.1:5000/http://developer.itsmarta.com/BRDRestService/RestBusRealTimeService/GetAllBus",
+        success: function(data) {
+            for (i in data) {
+                for (j in route_nums) {
+                    var route_num = route_nums[j];
+                    if (data[i].ROUTE == route_num) {
+                        lat = data[i].LATITUDE;
+                        lon = data[i].LONGITUDE;
+                        // console.log(lat + ";" + lon);
+                        var busImage = 'https://maps.gstatic.com/mapfiles/transit/iw2/6/bus2.png';                    
+                        markers.push(new google.maps.Marker({
+                            position: {lat: Number(lat), lng: Number(lon)},
+                            map: map,
+                            icon: busImage,
+                        }));
+                    }
+                }
+            }
+        }
+    });
+}
+
+AutocompleteDirectionsHandler.prototype.updateRailMaker = function(map, lines) {
+    //TODO: display the position of rail
+    if (lines.length === 0) {
+        console.log('Rail is not available for current direction');
+        return;
+    }
+    $.ajax({
+        type: "GET",
+        dataType: "json",
+        url: "http://127.0.0.1:5000/http://developer.itsmarta.com/RealtimeTrain/RestServiceNextTrain/GetRealtimeArrivals?apikey=c9fa929c-d210-4dd4-b5a0-6912141f4b26",
+        success: function(data) {
+            for (i in data) {
+                for (j in lines) {
+                    var line = lines[j];
+                    if (data[i].LINE === line.toUpperCase()) {
+                    }   
+                }
+            }
+        }
+    });
+}
+
+AutocompleteDirectionsHandler.prototype.route = function() {
+  if (!this.originPlaceId || !this.destinationPlaceId) {
+    return;
+  }
+  var me = this;
+
+  this.directionsService.route(
+      {
+        origin: {'placeId': this.originPlaceId},
+        destination: {'placeId': this.destinationPlaceId},
+        travelMode: this.travelMode
+      },
+      function(response, status) {
+        if (status === 'OK') {
+          var nums = [];
+          var lines = [];
+          var steps = response.routes[0].legs[0].steps;
+          for (i in steps) {
+              var step = steps[i]
+              if (step.travel_mode == "TRANSIT") {
+                  var instruction = step.instructions;
+                  var num = instruction.match(/\d/g);
+                  var line;
+                  if (num) {
+                    num = num.join("");
+                    // me.updateBusMaker(me.map, num);
+                    nums.push(num);
+                  } else {
+                    //TODO: display the position of rail
+                    line = step.transit.line.name
+                    // me.updateRailMaker(me.map, line);
+                    lines.push(line);
+                  }
+              }
+          }
+          me.updateBusMaker(me.map, nums);
+          me.updateRailMaker(me.map, lines);
+          me.startWorker(nums, lines);
+          me.directionsRenderer.setDirections(response);
+        } else {
+          window.alert('Directions request failed due to ' + status);
+        }
+      });  
+      document.getElementById("flip").innerHTML="FROM " + $("#origin-input").val() + " " + "To " + $("#destination-input").val()
+};
+
+
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD0KnAEEpPVCyMX5swoZ_g42Sp_UGgw-OQ&libraries=places&callback=initMap">
+    </script>
+    <script src="worker.js" id="worker" type="javascript/worker">
+        self.onmessage = function (oEvent) {
+            var startTime = new Date().getTime();
+            var endTime = new Date().getTime();
+            while(endTime - startTime < oEvent.data.delay) {
+                endTime = new Date().getTime();
+            }
+            postMessage({
+                    time:endTime,
+                    msg:"startTime:" + startTime
+            });
+        }
+    </script>
+  </body>
+</html>

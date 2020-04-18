@@ -18,24 +18,36 @@
       #floating-panel2 {
         position: absolute;
         top: 10px;
-        left: 50%;
+        left: 25%;
         z-index: 5;
         background-color: #fff;
         padding: 5px;
         border: 1px solid #999;
         text-align: center;
         font-family: 'Roboto','sans-serif';
+        font-size: 15px;
         line-height: 30px;
         padding-left: 10px;
       }
       #floating-panel {
         background-color:  #ffffff;
         border: 1px solid #999;
-        left: 25%;
+        left: 40%;
         padding: 5px;
         position: absolute;
         top: 10px;
         z-index: 5;
+        font-size: 15px;
+      }
+      #select-panel {
+        background-color:  #ffffff;
+        border: 1px solid #999;
+        left: 10%;
+        padding: 5px;
+        position: absolute;
+        top: 10px;
+        z-index: 5;
+        font-size: 20px;
       }
       #legend-panel {
         background-color:  'rgba(0, 255, 255, 0)';
@@ -62,12 +74,13 @@
     <div id="floating-panel">
       <button onclick="toggleHeatmap()">Toggle Heatmap</button>
       <button onclick="changeRadius()">Change radius</button>
-      <div id='checkbox'>Select dayofweek: </div>
-
-
-
 
     </div>
+
+    <div id="select-panel">
+      <div id='checkbox'>Select dayofweek: </div>
+    </div>
+
 
     <div id="floating-panel2">
       <b>Add Special Instructions</b>
@@ -110,7 +123,7 @@
       var max_region_cases = 0;
 
       var W = -84.552449, E = -84.290496, N= 33.891756, S = 33.646680;
-      var split_num = 15;
+      var split_num = 30;
       var ns_itv,ew_itv;
       var count = 0;
       var max_pos = [33.75333,-84.39186];

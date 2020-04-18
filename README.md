@@ -4,7 +4,9 @@ repo for dva 2020spring
 
 Preliminary requirement:
 
-To run app, change directory to /dva2020SPring, 
+To run app, change directory to /dva2020SPring, replace ur own googleAPI key in html files you are trying to run, then set up a local server for this application.
+
+
 1. For crime heatmap: run get_backend_data.py to generate processed_data/crime_dayofweek{day}.csv,  then run heatmap_crime.html with simplehttpserver (in order to read local data)
 
 2. For direction setup:

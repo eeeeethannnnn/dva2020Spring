@@ -3,10 +3,9 @@ repo for dva 2020spring
 
 
 Preliminary requirement:
-pip install flask
 
 To run app, change directory to /dva2020SPring, 
-1. run get_backend_data.py to generate processed_data/crime_dayofweek{day}.csv',  then run heatmap_crime.html with simplehttpserver (in order to read local data)
+1. For crime heatmap: run get_backend_data.py to generate processed_data/crime_dayofweek{day}.csv,  then run heatmap_crime.html with simplehttpserver (in order to read local data)
 
 2. For direction setup:
 
@@ -19,7 +18,7 @@ To run app, change directory to /dva2020SPring,
 https://data.world/bryantahb/crime-in-atlanta-2009-2017
 
 # development Progress
-
+Final report: https://docs.google.com/document/d/1bJVuXXgRxuwIMC7AVtYpc6XTHTtlqMXkgdh0NVhHMWQ/edit
 
 Progress report:  https://docs.google.com/document/d/14zlKJDJ-P-m9XlJSsZxpegkVBsxR0UmXlAieJRGKgJ8/edit
 

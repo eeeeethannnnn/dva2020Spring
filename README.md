@@ -8,11 +8,17 @@ pip install flask
 To run app, change directory to /dva2020SPring, 
 1. run get_backend_data.py to generate processed_data/crime_dayofweek{day}.csv',  then run heatmap_crime.html with simplehttpserver (in order to read local data)
 
+2. For direction setup:
+
+Run:
+python cors_server.py
+
+Open: direction.html
+
 # Crime data source:
 https://data.world/bryantahb/crime-in-atlanta-2009-2017
 
 # development Progress
-backend: finished data processing for crime data as json, finished data loading for Marta data as json with get_backend_data.py
 
 Crime Map:
 1. Build a model of grids, calculate number of cases in each grid, divided by total number, and set crime index of cases with
@@ -28,9 +34,4 @@ Proposal final version: https://docs.google.com/document/d/1k3DO6w0mCKB6WbNiO9V5
 Proposal discussion: https://docs.google.com/document/d/1k-9Isi-dyjtrnoLBnD3rLMsvTG4m8MDrT2V3ZnC_pAM/edit
 
 
-For direction setup:
 
-Run:
-python cors_server.py
-
-Open: direction.html
